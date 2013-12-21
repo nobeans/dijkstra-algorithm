@@ -33,11 +33,11 @@ class Node {
 
     @Override
     String toString() {
-        "${done ? '*' : ' '}node#${id}${edges}:${fromPath}"
+        "${done ? '*' : ' '}node#${id}${edges}:${path}"
     }
 
-    String getFromPath() {
-        (from ? from.fromPath : '') + "/node#${id}(${cost})"
+    String getPath() {
+        (from ? from.path : '') + "/node#${id}(${cost})"
     }
 
     // グラフ構築のためのヘルパメソッド
@@ -103,15 +103,17 @@ def newNodeList = {
 }
 
 // Solving
-def minPath = { NodeList nodes, Node startNode, Node goalNode ->
-    nodes.calculateCostFrom(startNode)
-    return goalNode?.fromPath
-}
-
 (0..5).each { start ->
+    def nodes = newNodeList()
+    nodes.calculateCostFrom(nodes[start])
+
+    // あるスタートノードに対して全ノードの最小コストが計算できていると、
+    // 任意のノードをゴールとしたときの最短経路がわかる。
+    // 逆に言えば、あるノードに対する他の全ノードからの最短経路が1回の計算で算出できる。
+    // つまり、ゲームなどで言えば、キャラクタの移動先地点をゴールノードではなくスタートノードとすれば
+    // 任意の移動元地点からの最短距離が分かるので、複数キャラクタを1地点に移動させるときの計算が1回で済む。
     (0..5).each { goal ->
-        def nodes = newNodeList()
-        println "node#${start}->node#${goal}: " + minPath(nodes, nodes[start], nodes[goal])
+        println "node#${start}->node#${goal}: " + nodes[goal].path
     }
 }
 
