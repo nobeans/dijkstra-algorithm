@@ -91,18 +91,27 @@ class NodeList {
 }
 
 // Setup sample data
-def nodes = new NodeList(6)
-nodes[0].addEdgeTo(nodes[1], 5).addEdgeTo(nodes[2], 4).addEdgeTo(nodes[3], 2)
-nodes[1].addEdgeTo(nodes[0], 5).addEdgeTo(nodes[2], 2).addEdgeTo(nodes[5], 6)
-nodes[2].addEdgeTo(nodes[0], 4).addEdgeTo(nodes[1], 2).addEdgeTo(nodes[3], 3).addEdgeTo(nodes[4], 2)
-nodes[3].addEdgeTo(nodes[0], 2).addEdgeTo(nodes[2], 3).addEdgeTo(nodes[4], 6)
-nodes[4].addEdgeTo(nodes[2], 2).addEdgeTo(nodes[3], 6).addEdgeTo(nodes[5], 4)
-nodes[5].addEdgeTo(nodes[1], 6).addEdgeTo(nodes[4], 4)
+def newNodeList = {
+    def nodes = new NodeList(6)
+    nodes[0].addEdgeTo(nodes[1], 5).addEdgeTo(nodes[2], 4).addEdgeTo(nodes[3], 2)
+    nodes[1].addEdgeTo(nodes[0], 5).addEdgeTo(nodes[2], 2).addEdgeTo(nodes[5], 6)
+    nodes[2].addEdgeTo(nodes[0], 4).addEdgeTo(nodes[1], 2).addEdgeTo(nodes[3], 3).addEdgeTo(nodes[4], 2)
+    nodes[3].addEdgeTo(nodes[0], 2).addEdgeTo(nodes[2], 3).addEdgeTo(nodes[4], 6)
+    nodes[4].addEdgeTo(nodes[2], 2).addEdgeTo(nodes[3], 6).addEdgeTo(nodes[5], 4)
+    nodes[5].addEdgeTo(nodes[1], 6).addEdgeTo(nodes[4], 4)
+    return nodes
+}
 
 // Solving
-
-def minPath = { startNode, goalNode ->
+def minPath = { NodeList nodes, Node startNode, Node goalNode ->
     nodes.calculateCostFrom(startNode)
     return goalNode?.fromPath
 }
-println minPath(nodes[0], nodes[5])
+
+(0..5).each { start ->
+    (0..5).each { goal ->
+        def nodes = newNodeList()
+        println "node#${start}->node#${goal}: " + minPath(nodes, nodes[start], nodes[goal])
+    }
+}
+
