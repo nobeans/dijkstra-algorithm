@@ -6,17 +6,9 @@ import groovy.util.logging.Slf4j
 class Node {
     def id
     def edges = []
-    int cost = Integer.MAX_VALUE // 最小コスト
+    int cost = Integer.MAX_VALUE // 最小コスト(最初は無限大)
     Node from                    // 最小コストはどのノードからきたときか
     boolean done = false         // 評価済みフラグ
-
-    String toString() {
-        "${done ? '*' : ' '}node#${id}${edges}:${fromPath}"
-    }
-
-    String getFromPath() {
-        (from ? from.fromPath : '') + "/node#${id}(${cost})"
-    }
 
     // このノードを評価して隣接ノードのコストに反映する。
     void evalNode() {
@@ -38,39 +30,20 @@ class Node {
         done = true
         log.debug "evalNode(): done: ${this}"
     }
-}
 
-@Slf4j
-class NodeList {
-    def nodes = [:]
-
-    NodeList(Iterable range) {
-        range.each {
-            nodes[it] = new Node(id: it)
-        }
-    }
-
-    def getAt(key) {
-        nodes[key]
-    }
-
+    @Override
     String toString() {
-        nodes.collect { it }.join(System.getProperty("line.separator"))
+        "${done ? '*' : ' '}node#${id}${edges}:${fromPath}"
     }
 
-    void calculateCostFrom(startNode) {
-        // スタートノードのコストは0
-        startNode.cost = 0
-        while (true) {
-            // その時点の未評価＆最小コストのノードから順番に評価していく
-            def node = minCostNode
-            if (!node) return
-            node.evalNode()
-        }
+    String getFromPath() {
+        (from ? from.fromPath : '') + "/node#${id}(${cost})"
     }
 
-    private getMinCostNode() {
-        nodes.findAll { id, node -> !node.done }.sort { it.value.cost }.find()?.value
+    // グラフ構築のためのヘルパメソッド
+    def addEdgeTo(Node toNode, int cost) {
+        edges << new Edge(to: toNode, cost: cost)
+        this // for method chain
     }
 }
 
@@ -78,63 +51,58 @@ class Edge {
     Node to      // 接続先ノード
     int cost = 0 // 接続先ノードへの必要コスト
 
+    @Override
     String toString() {
         "(${cost})->node#${to?.id}"
     }
 }
 
-// Setup sample data
-def nodes = new NodeList(1..6)
+class NodeList {
+    @Delegate
+    List<Node> nodes = []
 
-nodes[1].edges = [
-    new Edge(cost: 5, to: nodes[2]),
-    new Edge(cost: 4, to: nodes[3]),
-    new Edge(cost: 2, to: nodes[4]),
-]
-nodes[2].edges = [
-    new Edge(cost: 5, to: nodes[1]),
-    new Edge(cost: 2, to: nodes[3]),
-    new Edge(cost: 6, to: nodes[6]),
-]
-nodes[3].edges = [
-    new Edge(cost: 4, to: nodes[1]),
-    new Edge(cost: 2, to: nodes[2]),
-    new Edge(cost: 3, to: nodes[4]),
-    new Edge(cost: 2, to: nodes[5]),
-]
-nodes[4].edges = [
-    new Edge(cost: 2, to: nodes[1]),
-    new Edge(cost: 3, to: nodes[3]),
-    new Edge(cost: 6, to: nodes[5]),
-]
-nodes[5].edges = [
-    new Edge(cost: 2, to: nodes[3]),
-    new Edge(cost: 6, to: nodes[4]),
-    new Edge(cost: 4, to: nodes[6]),
-]
-nodes[6].edges = [
-    new Edge(cost: 6, to: nodes[2]),
-    new Edge(cost: 4, to: nodes[5]),
-]
+    NodeList(int number) {
+        number.times {
+            nodes[it] = new Node(id: it)
+        }
+    }
+
+    void calculateCostFrom(startNode) {
+        // スタートノードのコストを0に設定する。
+        startNode.cost = 0
+
+        // その時点の未評価＆最小コストのノードから順番に評価していく。
+        // 最初は未評価＆最小コストはスタートノードしかないので、スタートノードから評価開始される。
+        while (true) {
+            def node = minCostNode
+            if (!node) return
+            node.evalNode()
+        }
+    }
+
+    private getMinCostNode() {
+        nodes.findAll { !it.done }.sort { it.cost }.find()
+    }
+
+    @Override
+    String toString() {
+        nodes.collect { it }.join(System.getProperty("line.separator"))
+    }
+}
+
+// Setup sample data
+def nodes = new NodeList(6)
+nodes[0].addEdgeTo(nodes[1], 5).addEdgeTo(nodes[2], 4).addEdgeTo(nodes[3], 2)
+nodes[1].addEdgeTo(nodes[0], 5).addEdgeTo(nodes[2], 2).addEdgeTo(nodes[5], 6)
+nodes[2].addEdgeTo(nodes[0], 4).addEdgeTo(nodes[1], 2).addEdgeTo(nodes[3], 3).addEdgeTo(nodes[4], 2)
+nodes[3].addEdgeTo(nodes[0], 2).addEdgeTo(nodes[2], 3).addEdgeTo(nodes[4], 6)
+nodes[4].addEdgeTo(nodes[2], 2).addEdgeTo(nodes[3], 6).addEdgeTo(nodes[5], 4)
+nodes[5].addEdgeTo(nodes[1], 6).addEdgeTo(nodes[4], 4)
 
 // Solving
 
-def dumpNodes = { label = '' ->
-    println "${label}" + "-"*10
-    println nodes
+def minPath = { startNode, goalNode ->
+    nodes.calculateCostFrom(startNode)
+    return goalNode?.fromPath
 }
-
-// スタートとゴールの指定
-def startNode = nodes[1]
-def goalNode = nodes[6]
-
-dumpNodes("Initial")
-
-nodes.calculateCostFrom(startNode)
-
-dumpNodes("Done")
-
-// スタートからゴールまでの道を表示する
-println "Answer:" + "-"*50
-println goalNode.fromPath
-
+println minPath(nodes[0], nodes[5])
